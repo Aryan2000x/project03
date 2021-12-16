@@ -1,9 +1,25 @@
+import requests
 from django.shortcuts import render
-from django.http import HttpResponse
+
 
 # Define the home view
-def home(request):
-  return HttpResponse('<h1>Home Page</h1>')
 
-def about(request):
-    return HttpResponse('<h1>Welcome to About Page</h1>')
+def index(request):
+  url= "https://api.openweathermap.org/data/2.5/weather?q={}&units=metric&appid=615565f33a31c50af502c7ff0810f560"
+
+  city = 'Toronto'
+
+  r = requests.get(url.format(city)).json()
+
+  city_weather = {
+    'city': city ,
+    'temperature': r['main']['temp'],
+    'description' : r ['weather'][0]['description'],
+    'icon': r['weather'][0]['icon'],
+  }
+  
+  context = {'city_weather': city_weather}
+
+  return render(request, 'weather/weather.html', context)
+    
+
