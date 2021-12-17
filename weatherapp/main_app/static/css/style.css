@@ -1,0 +1,28 @@
+
+body {  
+     
+    background-image:url("Toronto2.png")
+}
+  
+  .hero-body {
+      color:darkgray;
+      font-family:monospace;
+      background-color:rgb(20, 19, 19);
+      display: flex;
+      min-height: 1px;
+      flex-direction: column;
+
+  }
+  .content{
+      font-family: monospace;
+  }
+  .button  {
+      font-family: monospace;
+  }
+  .notifications {
+      font-family: monospace;
+  }
+   .section{
+      background:linear-gradient(rgb grey,white);
+  }
+  

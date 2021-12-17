@@ -1,8 +1,10 @@
 from django.db import models
 
-# Import auth
-from django.contrib.auth.models import User
+class City(models.Model):
+    name = models.CharField(max_length = 25)
 
-# Create your models here.
+    def __str__(self):
+        return self.name
 
-
+    class Meta:
+       verbose_name_plural = 'cities'
