@@ -1,34 +1,68 @@
 import requests
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from .models import City
-
-
-# Define the home view
+from .forms import CityForm
 
 def index(request):
-  url= "https://api.openweathermap.org/data/2.5/weather?q={}&units=metric&appid=615565f33a31c50af502c7ff0810f560"
+    url = 'http://api.openweathermap.org/data/2.5/weather?q={}&units=metric&appid=f2593238c31103c0cf991dbe74e24bf4'
 
-  city = 'Toronto'
+    err_msg = ''
+    message = ''
+    message_class = ''
 
-  cities = City.objects.all()
+    if request.method == 'POST':
+        form = CityForm(request.POST)
 
-  weather_data = []
-   
-  for city in cities:
+        if form.is_valid():
+            new_city = form.cleaned_data['name']
+            existing_city_count = City.objects.filter(name=new_city).count()
+            
+            if existing_city_count == 0:
+                r = requests.get(url.format(new_city)).json()
 
-      r = requests.get(url.format(city)).json()
+                if r['cod'] == 200:
+                    form.save()
+                else:
+                    err_msg = 'City does not exist in the world!'
+            else:
+                err_msg = 'City already exists in the database!'
 
-      city_weather = {
-          'city': city.name ,
-          'temperature': r['main']['temp'],
-          'description' : r ['weather'][0]['description'],
-          'icon': r['weather'][0]['icon'],
-      }
+        if err_msg:
+            message = err_msg
+            message_class = 'is-danger'
+        else:
+            message = 'City added successfully!'
+            message_class = 'is-success'
 
-      weather_data.append(city_weather)
+    form = CityForm()
 
-  print(weather_data)
+    cities = City.objects.all()
 
-  context = {'weather_data': weather_data}
+    weather_data = []
 
-  return render(request, 'weather/weather.html', context)
+    for city in cities:
+
+        r = requests.get(url.format(city)).json()
+
+        city_weather = {
+            'city' : city.name,
+            'temperature' : r['main']['temp'],
+            'description' : r['weather'][0]['description'],
+            'icon' : r['weather'][0]['icon'],
+        }
+
+        weather_data.append(city_weather)
+
+    context = {
+        'weather_data' : weather_data, 
+        'form' : form,
+        'message' : message,
+        'message_class' : message_class
+    }
+
+    return render(request, 'weather/weather.html', context)
+
+def delete_city(request, city_name):
+    City.objects.get(name =city_name).delete()
+    
+    return redirect('home')
