@@ -1,6 +1,8 @@
 import requests
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
+from .models import City
+from .forms import CityForm
 #imports for login
 from django.contrib.auth import login, authenticate
 # imports for signup forms
@@ -16,8 +18,7 @@ from django.template.loader import render_to_string
 from .tokens import account_activation_token
 # email
 from django.core.mail import EmailMessage
-from .models import City
-from .forms import CityForm
+
 
 class SignupForm(UserCreationForm):
     email = forms.EmailField(max_length=200, help_text='Required')
@@ -25,7 +26,47 @@ class SignupForm(UserCreationForm):
         model = User
         fields = ('username', 'email', 'password1', 'password2')
 
+    
+def signup(request):
+    if request.method == 'POST':
+        form = SignupForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.is_active = False
+            user.save()
+            current_site = get_current_site(request)
+            mail_subject = 'Activate your Weather account.'
+            message = render_to_string('registration/acc_active_email.html', {
+                'user': user,
+                'domain': current_site.domain,
+                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+                'token': account_activation_token.make_token(user),
+            })
+            to_email = form.cleaned_data.get('email')
+            email = EmailMessage(mail_subject, message, to=[to_email])
+            email.send()
+            return HttpResponse('Please confirm your email address to complete the registration<br /> <a href=\'/\'>return home</a>')
+    else:
+        form = SignupForm()
+    return render(request, 'registration/signup.html', {'form': form})
+
+def activate(request, uidb64, token):
+    try:
+        uid = force_text(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except(TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+    if user is not None and account_activation_token.check_token(user, token):
+        user.is_active = True
+        user.save()
+        login(request, user)
+        # return redirect('home')
+        return HttpResponse('Thank you for your email confirmation. Now you can login your account.<a href=\'/accounts/login/\'>log in</a>' )
+    else:
+        return HttpResponse('Activation link is invalid!')
+
 # Define the home view
+
 
 def index(request):
     url = 'http://api.openweathermap.org/data/2.5/weather?q={}&units=metric&appid=f2593238c31103c0cf991dbe74e24bf4'
@@ -89,42 +130,5 @@ def index(request):
 def delete_city(request, city_name):
     City.objects.get(name =city_name).delete()
     
-    return redirect('home')
+    return redirect('index')
 
-def signup(request):
-    if request.method == 'POST':
-        form = SignupForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.is_active = False
-            user.save()
-            current_site = get_current_site(request)
-            mail_subject = 'Activate your Weather account.'
-            message = render_to_string('registration/acc_active_email.html', {
-                'user': user,
-                'domain': current_site.domain,
-                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
-                'token': account_activation_token.make_token(user),
-            })
-            to_email = form.cleaned_data.get('email')
-            email = EmailMessage(mail_subject, message, to=[to_email])
-            email.send()
-            return HttpResponse('Please confirm your email address to complete the registration<br /> <a href=\'/\'>return home</a>')
-    else:
-        form = SignupForm()
-    return render(request, 'registration/signup.html', {'form': form})
-
-def activate(request, uidb64, token):
-    try:
-        uid = force_text(urlsafe_base64_decode(uidb64))
-        user = User.objects.get(pk=uid)
-    except(TypeError, ValueError, OverflowError, User.DoesNotExist):
-        user = None
-    if user is not None and account_activation_token.check_token(user, token):
-        user.is_active = True
-        user.save()
-        login(request, user)
-        # return redirect('home')
-        return HttpResponse('Thank you for your email confirmation. Now you can login your account.<a href=\'/accounts/login/\'>log in</a>' )
-    else:
-        return HttpResponse('Activation link is invalid!')
