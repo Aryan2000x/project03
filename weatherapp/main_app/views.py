@@ -128,7 +128,7 @@ def index(request):
     return render(request, 'weather/weather.html', context)
 
 def delete_city(request, city_name):
-    City.objects.get(name =city_name).delete()
+    City.objects.get(name=city_name).delete()
     
     return redirect('index')
 
