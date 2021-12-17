@@ -18,6 +18,8 @@ from django.template.loader import render_to_string
 from .tokens import account_activation_token
 # email
 from django.core.mail import EmailMessage
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 
 class SignupForm(UserCreationForm):
@@ -67,66 +69,68 @@ def activate(request, uidb64, token):
 
 # Define the home view
 
+class Weather(LoginRequiredMixin):
 
-def index(request):
-    url = 'http://api.openweathermap.org/data/2.5/weather?q={}&units=metric&appid=f2593238c31103c0cf991dbe74e24bf4'
+    def index(request):
+        url = 'http://api.openweathermap.org/data/2.5/weather?q={}&units=metric&appid=f2593238c31103c0cf991dbe74e24bf4'
 
-    err_msg = ''
-    message = ''
-    message_class = ''
+        err_msg = ''
+        message = ''
+        message_class = ''
 
-    if request.method == 'POST':
-        form = CityForm(request.POST)
+        if request.method == 'POST':
+            form = CityForm(request.POST)
 
-        if form.is_valid():
-            new_city = form.cleaned_data['name']
-            existing_city_count = City.objects.filter(name=new_city).count()
-            
-            if existing_city_count == 0:
-                r = requests.get(url.format(new_city)).json()
+            if form.is_valid():
+                new_city = form.cleaned_data['name']
+                existing_city_count = City.objects.filter(name=new_city).count()
+                
+                if existing_city_count == 0:
+                    r = requests.get(url.format(new_city)).json()
 
-                if r['cod'] == 200:
-                    form.save()
+                    if r['cod'] == 200:
+                        form.save()
+                    else:
+                        err_msg = 'City does not exist in the world!'
                 else:
-                    err_msg = 'City does not exist in the world!'
+                    err_msg = 'City already exists in the database!'
+
+            if err_msg:
+                message = err_msg
+                message_class = 'is-danger'
             else:
-                err_msg = 'City already exists in the database!'
+                message = 'City added successfully!'
+                message_class = 'is-success'
 
-        if err_msg:
-            message = err_msg
-            message_class = 'is-danger'
-        else:
-            message = 'City added successfully!'
-            message_class = 'is-success'
+        form = CityForm()
 
-    form = CityForm()
+        cities = City.objects.all()
 
-    cities = City.objects.all()
+        weather_data = []
 
-    weather_data = []
+        for city in cities:
 
-    for city in cities:
+            r = requests.get(url.format(city)).json()
 
-        r = requests.get(url.format(city)).json()
+            city_weather = {
+                'city' : city.name,
+                'temperature' : r['main']['temp'],
+                'description' : r['weather'][0]['description'],
+                'icon' : r['weather'][0]['icon'],
+            }
 
-        city_weather = {
-            'city' : city.name,
-            'temperature' : r['main']['temp'],
-            'description' : r['weather'][0]['description'],
-            'icon' : r['weather'][0]['icon'],
+            weather_data.append(city_weather)
+
+        context = {
+            'weather_data' : weather_data, 
+            'form' : form,
+            'message' : message,
+            'message_class' : message_class
         }
 
-        weather_data.append(city_weather)
+        return render(request, 'weather/weather.html', context)
 
-    context = {
-        'weather_data' : weather_data, 
-        'form' : form,
-        'message' : message,
-        'message_class' : message_class
-    }
-
-    return render(request, 'weather/weather.html', context)
-
+@login_required
 def delete_city(request, city_name):
     City.objects.get(name=city_name).delete()
     
