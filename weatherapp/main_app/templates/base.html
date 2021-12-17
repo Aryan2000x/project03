@@ -21,7 +21,7 @@
             <li><a href="#">About</a></li>
             {% if user.is_authenticated %}
               <li><a href="#">add something</a></li>
-              <li><a href="#">profile {{ username }}</a></li>
+              <li><a href="#">profile</a></li>
               <li><a href="{% url 'logout' %}">Log Out</a></li>
             {% else %}
               <li><a href="{% url 'signup' %}">Sign Up</a></li>
