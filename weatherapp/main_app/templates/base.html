@@ -16,7 +16,18 @@
     <section class="hero is-primary">
       <div class="hero-body">
         <div class="container">
-          <h1 class="title">Weather App</h1>
+          <a href="{% url 'index' %}"><h1 class="title left brand-logo">Weather App</h1></a>
+          <ul class="right">
+            <li><a href="#">About</a></li>
+            {% if user.is_authenticated %}
+              <li><a href="#">add something</a></li>
+              <li><a href="#">profile {{ username }}</a></li>
+              <li><a href="{% url 'logout' %}">Log Out</a></li>
+            {% else %}
+              <li><a href="{% url 'signup' %}">Sign Up</a></li>
+              <li><a href="{% url 'login' %}">Log In</a></li>
+            {% endif %}
+          </ul>
         </div>
       </div>
     </section>
